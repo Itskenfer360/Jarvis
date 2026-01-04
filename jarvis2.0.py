@@ -15,7 +15,7 @@ import unicodedata
 # =========================
 # CONFIGURACIÓN
 # =========================
-WAKE_WORD = "jarvis"
+PalabraClave = "jarvis"
 IDIOMA = "es-ES"
 
 # =========================
@@ -66,7 +66,7 @@ def escuchar():
 # =========================
 # COMANDOS
 # =========================
-def procesar_comando(cmd):
+def procesarComando(cmd):
     if "hora" in cmd:
         hablar("Son las " + datetime.datetime.now().strftime("%H:%M"))
         return True
@@ -89,6 +89,11 @@ def procesar_comando(cmd):
         hablar("Hasta luego.")
         return False
 
+    if "muestrame tu codigo" in cmd or "ver tu codigo" in cmd:
+        hablar("Te muestro mi codigo fuente en GitHub.")
+        webbrowser.open("https://github.com/Itskenfer360/Jarvis/blob/main/jarvis.py")
+        return True
+
     hablar("No entiendo el comando.")
     return True
 
@@ -106,7 +111,7 @@ def main():
     while activo:
         texto = escuchar()
 
-        if not texto.startswith(WAKE_WORD):
+        if not texto.startswith(PalabraClave):
             continue
 
         hablar("Te escucho")
@@ -116,7 +121,7 @@ def main():
             hablar("No te he entendido.")
             continue
 
-        activo = procesar_comando(comando)
+        activo = procesarComando(comando)
         time.sleep(0.3)
 
 # =========================
