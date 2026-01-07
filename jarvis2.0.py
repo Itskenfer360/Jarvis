@@ -1,33 +1,29 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Jan  3 18:13:01 2026
-
-@author: kenne
-"""
-
 import speech_recognition as sr
-import pyttsx3
 import datetime
 import webbrowser
 import time
 import unicodedata
+import win32com.client as wincl
+import os
 
 # =========================
 # CONFIGURACIÓN
 # =========================
-PalabraClave = "jarvis"
+WAKE_WORDS = ["jarvis","oye jarvis", "jarbis", "harvis", "yarvis", "charvis","jarvi"]
+
 IDIOMA = "es-ES"
 
 # =========================
-# TEXTO A VOZ
+# VOZ (SAPI - Windows)
 # =========================
-engine = pyttsx3.init()
-engine.setProperty("rate", 170)
+voz = wincl.Dispatch("SAPI.SpVoice")
+voz.Volume = 100   # 0-100
+voz.Rate = 0       # -10 a 10
 
-def hablar(texto):
+def hablar(texto: str):
     print("Jarvis:", texto)
-    engine.say(texto)
-    engine.runAndWait()
+    voz.Speak(texto)
 
 # =========================
 # RECONOCIMIENTO DE VOZ
@@ -37,15 +33,15 @@ r.dynamic_energy_threshold = True
 r.pause_threshold = 0.6
 r.non_speaking_duration = 0.3
 
-def normalizar(texto):
+def normalizar(texto: str) -> str:
     texto = texto.lower()
-    texto = ''.join(
-        c for c in unicodedata.normalize('NFD', texto)
-        if unicodedata.category(c) != 'Mn'
+    texto = "".join(
+        c for c in unicodedata.normalize("NFD", texto)
+        if unicodedata.category(c) != "Mn"
     )
     return texto
 
-def escuchar():
+def escuchar() -> str:
     with sr.Microphone() as source:
         try:
             audio = r.listen(source, timeout=6, phrase_time_limit=6)
@@ -60,72 +56,75 @@ def escuchar():
     except sr.UnknownValueError:
         return ""
     except sr.RequestError:
-        hablar("Problema de conexión.")
+        hablar("Problema de conexion.")
         return ""
 
 # =========================
 # COMANDOS
 # =========================
-def procesarComando(cmd):
+def procesar_comando(cmd: str) -> bool:
     if "hora" in cmd:
         hablar("Son las " + datetime.datetime.now().strftime("%H:%M"))
         return True
 
-    if "abre" in cmd and "google" in cmd:
+    if "abre" in cmd and ("google" in cmd or "gugel" in cmd):
         hablar("Abriendo Google")
-        webbrowser.open("https://www.google.com")
+        os.startfile("https://www.google.com")
         return True
 
-    if "abre" in cmd and "youtube" in cmd:
+    cmd = cmd.replace("you tube", "youtube")  
+    if "abre" in cmd and ("youtube" in cmd or "yutu" in cmd):
         hablar("Abriendo YouTube")
-        webbrowser.open("https://www.youtube.com")
+        os.startfile("https://www.youtube.com")
         return True
+
 
     if "como estas" in cmd:
         hablar("Funcionando correctamente.")
         return True
-
+    if "muestrame tu codigo" in cmd or "ver tu codigo" in cmd:
+        hablar("Te muestro mi codigo fuente en GitHub.")
+        webbrowser.open("https://github.com/Itskenfer360/Jarvis/blob/main/jarvis2.0.py")
+        return True
     if "apaga" in cmd or "salir" in cmd:
         hablar("Hasta luego.")
         return False
-
-    if "muestrame tu codigo" in cmd or "ver tu codigo" in cmd:
-        hablar("Te muestro mi codigo fuente en GitHub.")
-        webbrowser.open("https://github.com/Itskenfer360/Jarvis/blob/main/jarvis.py")
-        return True
 
     hablar("No entiendo el comando.")
     return True
 
 # =========================
-# PROGRAMA PRINCIPAL
+# PRINCIPAL
 # =========================
 def main():
     hablar("Sistema iniciado. Di Jarvis para activarme.")
 
-    # Calibración UNA sola vez
+    # Calibrar una sola vez
     with sr.Microphone() as source:
         r.adjust_for_ambient_noise(source, duration=1)
 
-    activo = True
-    while activo:
+    while True:
+        # ===== ESTADO 1: REPOSO =====
         texto = escuchar()
-
-        if not texto.startswith(PalabraClave):
+        if not any(w in texto for w in WAKE_WORDS):
             continue
 
+        # ===== ESTADO 2: ESPERAR COMANDO =====
         hablar("Te escucho")
         comando = escuchar()
 
         if not comando:
             hablar("No te he entendido.")
+            time.sleep(0.5)
             continue
 
-        activo = procesarComando(comando)
-        time.sleep(0.3)
+        # ===== ESTADO 3: EJECUTAR =====
+        seguir = procesar_comando(comando)
 
-# =========================
-# EJECUCIÓN
-# =========================
+        if not seguir:
+            break  # salir del programa
+
+        # ===== ESTADO 4: RESET SUAVE =====
+        time.sleep(1.0)  # 🔑 
 if __name__ == "__main__":
     main()
